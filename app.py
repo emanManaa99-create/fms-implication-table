@@ -22,6 +22,7 @@ n = int(st.number_input("Number of States", 2, 8, 4))
 
 states = [chr(65+i) for i in range(n)]
 
+
 if "last_mode" not in st.session_state:
     st.session_state.last_mode = mode
 
@@ -38,21 +39,20 @@ if ("df" not in st.session_state
     if mode == "Moore":
         st.session_state.df = pd.DataFrame({
             "State": states,
-            "X = 0": [""]*n,
-            "X = 1": [""]*n,
+            "Next (X = 0)": [""]*n,
+            "Next (X = 1)": [""]*n,
             "Output": [""]*n
         })
     else:
         st.session_state.df = pd.DataFrame({
             "State": states,
-            "X = 0": [""]*n,
-            "X = 1": [""]*n,
-            "Out (X=0)": [""]*n,
-            "Out (X=1)": [""]*n
+            "Next (X = 0)": [""]*n,
+            "Next (X = 1)": [""]*n,
+            "Output (X = 0)": [""]*n,
+            "Output (X = 1)": [""]*n
         })
 
 df = st.data_editor(st.session_state.df, use_container_width=True, num_rows="fixed")
-
 
 
 
@@ -77,6 +77,7 @@ def minimize(states, trans, out, mode):
             if mode == "Moore":
                 if out[i] != out[j]:
                     mark[i][j] = 1
+
             else:
                 if out[i][0] != out[j][0] or out[i][1] != out[j][1]:
                     mark[i][j] = 1
@@ -148,8 +149,8 @@ if st.button("Run Minimization"):
     for i in range(n):
 
         t = [
-            clean(df.iloc[i]["X = 0"]),
-            clean(df.iloc[i]["X = 1"])
+            clean(df.iloc[i]["Next (X = 0)"]),
+            clean(df.iloc[i]["Next (X = 1)"])
         ]
 
         for x in t:
@@ -164,8 +165,8 @@ if st.button("Run Minimization"):
 
         else:
             o = [
-                clean(df.iloc[i]["Out (X=0)"]),
-                clean(df.iloc[i]["Out (X=1)"])
+                clean(df.iloc[i]["Output (X = 0)"]),
+                clean(df.iloc[i]["Output (X = 1)"])
             ]
             if "" in o:
                 invalid = True
@@ -196,6 +197,7 @@ if st.button("Run Minimization"):
                 """,
                 unsafe_allow_html=True
             )
+
 
 
 
