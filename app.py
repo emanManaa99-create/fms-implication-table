@@ -12,29 +12,35 @@ padding:20px;border-radius:15px;color:white;text-align:center;">
 """, unsafe_allow_html=True)
 
 mode = st.selectbox("Mode", ["Moore", "Mealy"])
-n = int(st.number_input("States", 2, 8, 4))
+n = int(st.number_input("Number of States", 2, 8, 4))
 
 states = [chr(65+i) for i in range(n)]
 
-if "df" not in st.session_state:
-    st.session_state.df = None
+def make_binary(n):
+    bits = max(2, (n-1).bit_length())
+    return [format(i, f"0{bits}b") for i in range(n)]
 
-if st.session_state.df is None or len(st.session_state.df) != n:
+binary = make_binary(n)
+
+st.markdown("## State Mapping (Binary)")
+map_df = pd.DataFrame({"State": states, "Binary": binary})
+st.dataframe(map_df, use_container_width=True)
+if "df" not in st.session_state or len(st.session_state.df) != n:
 
     if mode == "Moore":
         st.session_state.df = pd.DataFrame({
             "State": states,
-            "X=0": [""]*n,
-            "X=1": [""]*n,
+            "X0": [""]*n,
+            "X1": [""]*n,
             "Output": [""]*n
         })
     else:
         st.session_state.df = pd.DataFrame({
             "State": states,
-            "X=0": [""]*n,
-            "X=1": [""]*n,
-            "O/P X=0": [""]*n,
-            "O/P X=1": [""]*n
+            "X0": [""]*n,
+            "X1": [""]*n,
+            "O0": [""]*n,
+            "O1": [""]*n
         })
 
 df = st.data_editor(st.session_state.df, use_container_width=True)
@@ -118,7 +124,6 @@ def build_groups(states, mark):
                 union(parent, i, j)
 
     groups = {}
-
     for i in range(n):
         r = find(parent, i)
         groups.setdefault(r, []).append(states[i])
@@ -129,23 +134,23 @@ def build_groups(states, mark):
     if mode == "Moore":
         df2 = pd.DataFrame({
             "State": states,
-            "X=0": [t[0] for t in trans],
-            "X=1": [t[1] for t in trans],
+            "X0": [t[0] for t in trans],
+            "X1": [t[1] for t in trans],
             "Output": out
         })
     else:
         df2 = pd.DataFrame({
             "State": states,
-            "Next X=0": [t[0] for t in trans],
-            "Next X=1": [t[1] for t in trans],
-            "Out X=0": [o[0] for o in out],
-            "Out X=1": [o[1] for o in out]
+            "X0": [t[0] for t in trans],
+            "X1": [t[1] for t in trans],
+            "O0": [o[0] for o in out],
+            "O1": [o[1] for o in out]
         })
 
-    st.dataframe(df2)
+    st.dataframe(df2, use_container_width=True)
 
 
-if st.button("Run"):
+if st.button("Run Minimization"):
 
     df = st.session_state.temp_df
 
@@ -155,7 +160,7 @@ if st.button("Run"):
 
     for i in range(n):
 
-        t = [clean(df.iloc[i]["X=0"]), clean(df.iloc[i]["X=1"])]
+        t = [clean(df.iloc[i]["X0"]), clean(df.iloc[i]["X1"])]
 
         for x in t:
             if not valid(x):
@@ -167,7 +172,7 @@ if st.button("Run"):
                 invalid = True
             out.append(o)
         else:
-            o = [clean(df.iloc[i]["O/P X=0"]), clean(df.iloc[i]["O/P X=1"])]
+            o = [clean(df.iloc[i]["O0"]), clean(df.iloc[i]["O1"])]
             if "" in o:
                 invalid = True
             out.append(o)
@@ -175,7 +180,7 @@ if st.button("Run"):
         trans.append(t)
 
     if invalid:
-        st.error("Fill all fields")
+        st.error("Fill all fields correctly")
     else:
         mark = minimize(states, trans, out, mode)
         groups = build_groups(states, mark)
@@ -184,5 +189,7 @@ if st.button("Run"):
 
         for g in groups:
             st.write(g)
+
+
 
 
