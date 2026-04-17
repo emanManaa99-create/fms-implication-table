@@ -103,7 +103,10 @@ def minimize(states, trans, out):
             groups.append(g)
 
     return groups
-    if st.button("Run Minimization ▶")
+
+
+if st.button("Run Minimization ▶"):
+
     if all(all(trans[s]) for s in states) and all(out[s] for s in states):
 
         result = minimize(states, trans, out)
