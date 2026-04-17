@@ -12,7 +12,7 @@ color:white;
 text-align:center;
 box-shadow:0px 4px 18px rgba(0,0,0,0.3);">
 <h2>FSM Minimization Tool</h2>
-<p>Implication Table Method</p>
+<p>Implication Table Method (Moore / Mealy)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -69,7 +69,6 @@ def minimize(states, trans, out, mode):
     n = len(states)
     mark = [[0]*n for _ in range(n)]
 
-    # Step 1: Initial marking
     for i in range(n):
         for j in range(i):
 
@@ -83,7 +82,6 @@ def minimize(states, trans, out, mode):
                         mark[i][j] = 1
                         break
 
-    # Step 2: Propagation
     changed = True
 
     while changed:
@@ -229,7 +227,7 @@ if st.button("Run Minimization ▶"):
         else:
             show_mealy(trans, out)
 
-        st.success("Equivalent Groups")
+        st.success("Equivalent Groups Found")
 
         for g in groups:
             st.markdown(
@@ -246,7 +244,5 @@ if st.button("Run Minimization ▶"):
                 """,
                 unsafe_allow_html=True
             )
-
-
 
 
