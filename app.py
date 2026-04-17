@@ -7,12 +7,12 @@ st.markdown(
     """
     <div style="
         background: linear-gradient(90deg,#4facfe,#00f2fe);
-        padding: 30px;
-        border-radius: 18px;
+        padding: 25px;
+        border-radius: 15px;
         text-align: center;
         color: white;
-        margin-bottom: 25px;">
-        <h2>Finite State Machine Minimization</h2>
+        margin-bottom: 20px;">
+        <h2>FSM Minimization Tool</h2>
         <p>Implication Table Method - Moore & Mealy</p>
     </div>
     """,
@@ -20,17 +20,13 @@ st.markdown(
 )
 
 mode = st.selectbox("Select Mode", ["Moore", "Mealy"])
-n = st.number_input("Number of States", 2, 10, 4)
+n = st.number_input("Number of States", 2, 8, 4)
 
 states = [chr(65+i) for i in range(int(n))]
 inputs = ["00", "01", "10", "11"]
 
-st.markdown("## Transition Table (Excel Style)")
+if "df" not in st.session_state or len(st.session_state.df) != n:
 
-if "df" not in st.session_state:
-    st.session_state.df = None
-
-if st.session_state.df is None or len(st.session_state.df) != n:
     st.session_state.df = pd.DataFrame({
         "State": states,
         "00": [""]*n,
@@ -39,18 +35,26 @@ if st.session_state.df is None or len(st.session_state.df) != n:
         "11": [""]*n,
         "Output": [""]*n
     })
-edited = st.data_editor(st.session_state.df, use_container_width=True)
-st.session_state.df = edited
+
+st.markdown("## Transition Table")
+
+df = st.data_editor(
+    st.session_state.df,
+    use_container_width=True,
+    key="editor",
+    num_rows="fixed"
+)
+st.session_state.df = df
 def clean(x):
-    return str(x).strip().upper() if x is not None else ""
-
-
-def valid_state(x):
-    return x in states
+    return str(x).strip().upper()
 
 
 def idx(x):
     return ord(x) - 65
+
+
+def valid_state(x):
+    return x in states
 
 
 def minimize(states, trans, out, mode):
@@ -64,6 +68,7 @@ def minimize(states, trans, out, mode):
             if mode == "Moore":
                 if out[i] != out[j]:
                     mark[i][j] = 1
+
             else:
                 for k in range(4):
                     if out[i][k] != out[j][k]:
@@ -83,6 +88,9 @@ def minimize(states, trans, out, mode):
 
                 for k in range(4):
 
+                    if trans[i][k] == "" or trans[j][k] == "":
+                        continue
+
                     ni = idx(trans[i][k])
                     nj = idx(trans[j][k])
 
@@ -95,23 +103,6 @@ def minimize(states, trans, out, mode):
                         break
 
     return mark
-
-
-def draw_table(states, mark):
-
-    st.markdown("## Implication Table")
-
-    for i in range(len(states)):
-        row = ""
-
-        for j in range(len(states)):
-
-            if j >= i:
-                row += "⬜ "
-            else:
-                row += "❌ " if mark[i][j] else "⭕ "
-
-        st.write(states[i], row)
 
 
 def build_groups(states, mark):
@@ -135,6 +126,23 @@ def build_groups(states, mark):
     return groups
 
 
+def draw_table(states, mark):
+
+    st.markdown("## Implication Table")
+
+    for i in range(len(states)):
+        row = ""
+
+        for j in range(len(states)):
+
+            if j >= i:
+                row += "⬜ "
+            else:
+                row += "❌ " if mark[i][j] else "⭕ "
+
+        st.write(states[i], row)
+
+
 if st.button("Run Minimization ▶"):
 
     df = st.session_state.df.copy()
@@ -144,7 +152,7 @@ if st.button("Run Minimization ▶"):
 
     invalid = False
 
-    for i in range(len(states)):
+    for i in range(n):
 
         t = [
             clean(df.iloc[i]["00"]),
@@ -159,7 +167,7 @@ if st.button("Run Minimization ▶"):
             if x and not valid_state(x):
                 invalid = True
 
-        if mode == "Moore" and not o:
+        if mode == "Moore" and o == "":
             invalid = True
 
         if mode == "Mealy" and any(x == "" for x in t):
@@ -169,7 +177,7 @@ if st.button("Run Minimization ▶"):
         out.append(o if mode == "Moore" else t)
 
     if invalid:
-        st.error("Invalid input: check states and fill all fields")
+        st.error("Please fill all fields correctly (A, B, C...)")
     else:
 
         mark = minimize(states, trans, out, mode)
@@ -178,7 +186,7 @@ if st.button("Run Minimization ▶"):
 
         groups = build_groups(states, mark)
 
-        st.success("Equivalent State Groups Found")
+        st.success("Equivalent State Groups")
 
         for g in groups:
             st.markdown(
@@ -194,4 +202,5 @@ if st.button("Run Minimization ▶"):
                 """,
                 unsafe_allow_html=True
             )
-st.session_state.df = edited
+
+st.session_state.df = df
