@@ -18,7 +18,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 10, 4)
 
@@ -29,7 +28,6 @@ st.markdown("### Transition Table")
 
 trans = {}
 out = {}
-
 for s in states:
     with st.expander(f"State {s}", expanded=True):
 
@@ -42,9 +40,7 @@ for s in states:
             )
 
         out[s] = st.text_input("Output", key=f"o{s}")
-
-
-def idx(s):
+        def idx(s):
     return ord(s) - 65
 
 
@@ -104,9 +100,7 @@ def minimize(states, trans, out):
             groups.append(g)
 
     return groups
-
-
-if st.button("Run Minimization ▶"):
+    if st.button("Run Minimization ▶"):
 
     if all(all(trans[s]) for s in states) and all(out[s] for s in states):
 
@@ -123,4 +117,26 @@ if st.button("Run Minimization ▶"):
                 st.markdown(
                     f"""
                     <div style="
-                        background
+                        background: linear-gradient(135deg,#ffffff,#f3f6ff);
+                        border: 1px solid #dbe4ff;
+                        border-left: 6px solid #4b6cb7;
+                        padding: 16px;
+                        margin: 12px 0;
+                        border-radius: 14px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+
+                        <div style="font-size:14px;color:#666;margin-bottom:6px;">
+                            Equivalent State Group
+                        </div>
+
+                        <div style="font-size:18px;font-weight:600;color:#1f2a44;">
+                            {' , '.join(g)}
+                        </div>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    else:
+        st.warning("Please fill all fields")
