@@ -5,14 +5,14 @@ st.set_page_config(page_title="FSM Minimization Tool", layout="wide")
 st.markdown(
     """
     <div style="
-        background: linear-gradient(90deg,#1f1f1f,#2c2c2c);
-        padding: 20px;
+        background: linear-gradient(90deg,#0f0f0f,#2b2b2b);
+        padding: 25px;
         border-radius: 12px;
         text-align: center;
         color: white;
-        margin-bottom: 20px;">
+        margin-bottom: 25px;">
         <h2>Finite State Machine Minimization</h2>
-        <p style="color:#bbb;">Implication Table Method (Moore / Mealy)</p>
+        <p style="color:#bbbbbb;">Implication Table Method - Moore & Mealy</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -24,7 +24,7 @@ n = st.number_input("Number of States", 2, 10, 4)
 states = [chr(65+i) for i in range(int(n))]
 inputs = ["00", "01", "10", "11"]
 
-st.markdown("### Transition Table")
+st.markdown("### FSM Transition & Output Table")
 
 trans = {}
 out = {}
@@ -33,12 +33,11 @@ for s in states:
     with st.expander(f"State {s}", expanded=True):
 
         cols = st.columns(4)
-
         trans[s] = []
 
         for i, inp in enumerate(inputs):
             trans[s].append(
-                cols[i].text_input(f"{inp}", key=f"{s}{inp}")
+                cols[i].text_input(inp, key=f"{s}{inp}")
             )
 
         out[s] = st.text_input("Output", key=f"o{s}")
@@ -104,10 +103,7 @@ def minimize(states, trans, out):
             groups.append(g)
 
     return groups
-
-
-if st.button("Minimize FSM 🚀"):
-
+    if st.button("Run Minimization ▶")
     if all(all(trans[s]) for s in states) and all(out[s] for s in states):
 
         result = minimize(states, trans, out)
@@ -117,16 +113,20 @@ if st.button("Minimize FSM 🚀"):
         else:
             st.success("Equivalent States Found")
 
+            st.markdown("### Result Groups")
+
             for g in result:
                 st.markdown(
                     f"""
                     <div style="
-                        background:#1f1f1f;
+                        background:#111;
                         padding:12px;
                         margin:8px 0;
                         border-radius:10px;
                         color:#00ffcc;
-                        font-weight:bold;">
+                        font-size:16px;
+                        font-weight:bold;
+                        text-align:center;">
                         {' , '.join(g)}
                     </div>
                     """,
