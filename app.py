@@ -4,25 +4,22 @@ import pandas as pd
 st.set_page_config(page_title="FSM Tool", layout="wide")
 
 st.markdown("""
-<div style="
-background: linear-gradient(90deg,#2c3e50,#4ca1af,#5dade2);
-padding:25px;
-border-radius:15px;
-color:white;
-text-align:center;">
+<div style="background:linear-gradient(90deg,#2c3e50,#4ca1af,#5dade2);
+padding:20px;border-radius:15px;color:white;text-align:center;">
 <h2>FSM Minimization Tool</h2>
-<p>Implication Table</p>
+<p>Implication Table Method</p>
 </div>
 """, unsafe_allow_html=True)
 
 mode = st.selectbox("Mode", ["Moore", "Mealy"])
-n = st.number_input("States", 2, 8, 4)
+n = int(st.number_input("States", 2, 8, 4))
 
-states = [chr(65+i) for i in range(int(n))]
+states = [chr(65+i) for i in range(n)]
 
-state_bits = {"A":"00","B":"01","C":"10","D":"11","E":"100","F":"101"}
+if "df" not in st.session_state:
+    st.session_state.df = None
 
-if "df" not in st.session_state or len(st.session_state.df) != n:
+if st.session_state.df is None or len(st.session_state.df) != n:
 
     if mode == "Moore":
         st.session_state.df = pd.DataFrame({
@@ -40,8 +37,7 @@ if "df" not in st.session_state or len(st.session_state.df) != n:
             "O/P X=1": [""]*n
         })
 
-df = st.data_editor(st.session_state.df, use_container_width=True, num_rows="fixed")
-
+df = st.data_editor(st.session_state.df, use_container_width=True)
 st.session_state.temp_df = df
 def clean(x):
     return str(x).strip().upper()
@@ -100,8 +96,8 @@ def minimize(states, trans, out, mode):
     return mark
     def find(parent, x):
     if parent[x] != x:
-        return find(parent, parent[x])
-    return x
+        parent[x] = find(parent, parent[x])
+    return parent[x]
 
 
 def union(parent, a, b):
@@ -109,6 +105,7 @@ def union(parent, a, b):
     rb = find(parent, b)
     if ra != rb:
         parent[rb] = ra
+
 
 def build_groups(states, mark):
 
@@ -124,49 +121,36 @@ def build_groups(states, mark):
 
     for i in range(n):
         r = find(parent, i)
-        if r not in groups:
-            groups[r] = []
-        groups[r].append(states[i])
+        groups.setdefault(r, []).append(states[i])
 
     return list(groups.values())
+    def show(trans, out):
 
+    if mode == "Moore":
+        df2 = pd.DataFrame({
+            "State": states,
+            "X=0": [t[0] for t in trans],
+            "X=1": [t[1] for t in trans],
+            "Output": out
+        })
+    else:
+        df2 = pd.DataFrame({
+            "State": states,
+            "Next X=0": [t[0] for t in trans],
+            "Next X=1": [t[1] for t in trans],
+            "Out X=0": [o[0] for o in out],
+            "Out X=1": [o[1] for o in out]
+        })
 
-def show_mealy(trans, out):
-
-    st.markdown("## Mealy Table")
-
-    df = pd.DataFrame({
-        "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
-        "Next X=0": [trans[i][0] for i in range(len(states))],
-        "Next X=1": [trans[i][1] for i in range(len(states))],
-        "Out X=0": [out[i][0] for i in range(len(states))],
-        "Out X=1": [out[i][1] for i in range(len(states))]
-    })
-
-    st.dataframe(df, use_container_width=True)
-
-
-def show_moore(trans, out):
-
-    st.markdown("## Moore Table")
-
-    df = pd.DataFrame({
-        "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
-        "Next X=0": [trans[i][0] for i in range(len(states))],
-        "Next X=1": [trans[i][1] for i in range(len(states))],
-        "Output": out
-    })
-
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df2)
 
 
 if st.button("Run"):
 
-    df = st.session_state.temp_df.copy()
+    df = st.session_state.temp_df
 
     trans = []
     out = []
-
     invalid = False
 
     for i in range(n):
@@ -196,18 +180,9 @@ if st.button("Run"):
         mark = minimize(states, trans, out, mode)
         groups = build_groups(states, mark)
 
-        if mode == "Moore":
-            show_moore(trans, out)
-        else:
-            show_mealy(trans, out)
-
         st.success("Done")
 
         for g in groups:
-            st.markdown(
-                f"<div style='background:linear-gradient(90deg,#2c3e50,#4ca1af);color:white;padding:12px;margin:10px;border-radius:10px;'><b>{', '.join(g)}</b></div>",
-                unsafe_allow_html=True
-            )
-
+            st.write(g)
 
 
