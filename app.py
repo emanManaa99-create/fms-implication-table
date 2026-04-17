@@ -27,31 +27,43 @@ inputs = ["00", "01", "10", "11"]
 trans = {}
 out = {}
 
+st.markdown("### Transition Table")
+
 for s in states:
     with st.expander(f"State {s}", expanded=True):
 
         cols = st.columns(4)
         trans[s] = []
+        out[s] = []
 
         for i, inp in enumerate(inputs):
-            trans[s].append(cols[i].text_input(inp, key=f"{s}{inp}"))
+            trans[s].append(cols[i].text_input(f"Next({inp})", key=f"n{s}{inp}"))
 
-        out[s] = st.text_input("Output", key=f"o{s}")
+        if mode == "Moore":
+            out[s] = st.text_input("Output", key=f"o{s}")
+        else:
+            st.markdown("**Outputs (Mealy)**")
+            out[s] = []
+            c2 = st.columns(4)
+
+            for i, inp in enumerate(inputs):
+                out[s].append(c2[i].text_input(f"Out({inp})", key=f"m{s}{inp}"))
 
 
 def idx(s):
     return ord(s) - 65
 
 
-def minimize(states, trans, out):
+def minimize(states, trans, out, mode):
 
     n = len(states)
     mark = [[0]*n for _ in range(n)]
 
     for i in range(n):
         for j in range(i):
-            if out[states[i]] != out[states[j]]:
-                mark[i][j] = 1
+            if mode == "Moore":
+                if out[states[i]] != out[states[j]]:
+                    mark[i][j] = 1
 
     change = True
 
@@ -70,13 +82,13 @@ def minimize(states, trans, out):
                 for k in range(4):
 
                     try:
-                        a = idx(trans[si][k])
-                        b = idx(trans[sj][k])
+                        ni = idx(trans[si][k])
+                        nj = idx(trans[sj][k])
                     except:
                         return None
 
-                    x = max(a, b)
-                    y = min(a, b)
+                    x = max(ni, nj)
+                    y = min(ni, nj)
 
                     if mark[x][y] == 1:
                         mark[i][j] = 1
@@ -103,29 +115,47 @@ def minimize(states, trans, out):
 
 if st.button("Run Minimization ▶"):
 
-    if all(all(trans[s]) for s in states) and all(out[s] for s in states):
+    valid = True
 
-        result = minimize(states, trans, out)
+    if mode == "Moore":
+        valid = all(all(trans[s]) for s in states) and all(out[s] for s in states)
+    else:
+        for s in states:
+            if not all(trans[s]):
+                valid = False
+            if not all(out[s]):
+                valid = False
 
-        if result is None:
-            st.error("Check input format")
-        else:
-            st.success("Equivalent States Found")
+    result = minimize(states, trans, out, mode) if valid else None
 
-            for g in result:
-                st.markdown(
-                    f"""
-                    <div style="
-                        background: linear-gradient(135deg,#ffffff,#f3f6ff);
-                        border-left: 6px solid #4b6cb7;
-                        padding: 16px;
-                        margin: 12px 0;
-                        border-radius: 14px;">
+    if result is None:
+        st.error("Check input format")
+    else:
+        st.success("Equivalent States Found")
+
+        st.markdown("### Result Groups")
+
+        for g in result:
+            st.markdown(
+                f"""
+                <div style="
+                    background: linear-gradient(135deg,#ffffff,#f3f6ff);
+                    border: 1px solid #dbe4ff;
+                    border-left: 6px solid #4b6cb7;
+                    padding: 16px;
+                    margin: 12px 0;
+                    border-radius: 14px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+
+                    <div style="font-size:14px;color:#666;margin-bottom:6px;">
+                        Equivalent State Group
+                    </div>
+
+                    <div style="font-size:18px;font-weight:600;color:#1f2a44;">
                         {' , '.join(g)}
                     </div>
-                    """,
-                    unsafe_allow_html=True
-                )
 
-    else:
-        st.warning("Please fill all fields")
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
