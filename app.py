@@ -280,13 +280,4 @@ if st.button("Run Minimization"):
 
             st.write(g)
 
-                invalid = True
-
-        })
-
-    st.dataframe(df2, use_container_width=True)
-
-            if mark[i][j] == 0:
-                    
-
-        st
+               
