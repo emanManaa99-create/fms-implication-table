@@ -1,13 +1,18 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="FSM Tool", layout="wide")
+st.set_page_config(page_title="FSM Minimization Tool", layout="wide")
 
 st.markdown("""
-<div style="background:linear-gradient(90deg,#0f2027,#203a43,#2c5364);
-padding:25px;border-radius:15px;color:white;text-align:center">
+<div style="
+background: linear-gradient(90deg,#0f2027,#203a43,#2c5364);
+padding:25px;
+border-radius:15px;
+color:white;
+text-align:center;
+box-shadow:0px 4px 20px rgba(0,0,0,0.4);">
 <h2>FSM Minimization Tool</h2>
-<p>Implication Table Method</p>
+<p>Implication Table Method (Moore / Mealy)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -15,46 +20,28 @@ mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 8, 4)
 
 states = [chr(65+i) for i in range(int(n))]
+inputs = ["X=0", "X=1"]
 
-if "ns_df" not in st.session_state or len(st.session_state.ns_df) != n:
-    st.session_state.ns_df = pd.DataFrame({
+if "df" not in st.session_state or len(st.session_state.df) != n:
+
+    st.session_state.df = pd.DataFrame({
         "State": states,
         "X=0": [""]*n,
-        "X=1": [""]*n
+        "X=1": [""]*n,
+        "Output X=0": [""]*n,
+        "Output X=1": [""]*n,
     })
 
-if "op_df" not in st.session_state or len(st.session_state.op_df) != n:
-    st.session_state.op_df = pd.DataFrame({
-        "State": states,
-        "X=0": [""]*n,
-        "X=1": [""]*n
-    })
+st.markdown("## Input Table")
 
-if "moore_df" not in st.session_state or len(st.session_state.moore_df) != n:
-    st.session_state.moore_df = pd.DataFrame({
-        "State": states,
-        "Output": [""]*n
-    })
+df = st.data_editor(
+    st.session_state.df,
+    use_container_width=True,
+    key="editor",
+    num_rows="fixed"
+)
 
-st.markdown("## Input Tables")
-
-if mode == "Mealy":
-
-    st.markdown("### Next State")
-    ns_df = st.data_editor(st.session_state.ns_df, use_container_width=True, key="ns")
-
-    st.markdown("### Output")
-    op_df = st.data_editor(st.session_state.op_df, use_container_width=True, key="op")
-
-    st.session_state.temp_ns = ns_df
-    st.session_state.temp_op = op_df
-
-else:
-
-    st.markdown("### Moore Table")
-    moore_df = st.data_editor(st.session_state.moore_df, use_container_width=True, key="mo")
-
-    st.session_state.temp_moore = moore_df
+st.session_state.temp_df = df
 def clean(x):
     return str(x).strip().upper()
 
@@ -63,6 +50,7 @@ def idx(x):
 
 def valid_state(x):
     return x in states
+
 
 def minimize(states, trans, out, mode):
 
@@ -75,6 +63,7 @@ def minimize(states, trans, out, mode):
             if mode == "Moore":
                 if out[i] != out[j]:
                     mark[i][j] = 1
+
             else:
                 for k in range(2):
                     if out[i][k] != out[j][k]:
@@ -107,6 +96,7 @@ def minimize(states, trans, out, mode):
 
     return mark
 
+
 def build_groups(states, mark):
 
     visited = [0]*len(states)
@@ -126,13 +116,13 @@ def build_groups(states, mark):
 
     return groups
 
+
 def draw_table(states, mark):
 
     st.markdown("## Implication Table")
 
     for i in range(len(states)):
         row = ""
-
         for j in range(len(states)):
 
             if j >= i:
@@ -142,47 +132,48 @@ def draw_table(states, mark):
 
         st.write(states[i], row)
 
+
 if st.button("Run Minimization ▶"):
 
-    invalid = False
+    df = st.session_state.temp_df.copy()
+
     trans = []
     out = []
 
-    if mode == "Mealy":
+    invalid = False
 
-        ns_df = st.session_state.temp_ns
-        op_df = st.session_state.temp_op
+    for i in range(n):
 
-        for i in range(n):
+        t = [
+            clean(df.iloc[i]["X=0"]),
+            clean(df.iloc[i]["X=1"])
+        ]
 
-            t0 = clean(ns_df.iloc[i]["X=0"])
-            t1 = clean(ns_df.iloc[i]["X=1"])
+        if mode == "Moore":
 
-            o0 = clean(op_df.iloc[i]["X=0"])
-            o1 = clean(op_df.iloc[i]["X=1"])
-
-            if not valid_state(t0) or not valid_state(t1):
-                invalid = True
-
-            if o0 == "" or o1 == "":
-                invalid = True
-
-            trans.append([t0, t1])
-            out.append([o0, o1])
-
-    else:
-
-        moore_df = st.session_state.temp_moore
-
-        for i in range(n):
-
-            o = clean(moore_df.iloc[i]["Output"])
+            o = clean(df.iloc[i]["Output X=0"])
 
             if o == "":
                 invalid = True
 
-            trans.append([states[i], states[i]])
             out.append(o)
+        else:
+
+            o = [
+                clean(df.iloc[i]["Output X=0"]),
+                clean(df.iloc[i]["Output X=1"])
+            ]
+
+            if "" in o:
+                invalid = True
+
+            out.append(o)
+
+        for x in t:
+            if not valid_state(x):
+                invalid = True
+
+        trans.append(t)
 
     if invalid:
         st.error("Please fill all fields correctly")
@@ -194,18 +185,25 @@ if st.button("Run Minimization ▶"):
 
         groups = build_groups(states, mark)
 
-        st.success("Equivalent Groups")
+        st.success("Equivalent State Groups")
 
         for g in groups:
             st.markdown(
                 f"""
-                <div style="background:white;
-                border-left:5px solid #203a43;
-                padding:12px;margin:10px;border-radius:10px;">
-                <b>{', '.join(g)}</b>
+                <div style="
+                    background: linear-gradient(90deg,#0f2027,#2c5364);
+                    color:white;
+                    padding:12px;
+                    margin:10px;
+                    border-radius:10px;
+                    border-left:5px solid #4facfe;">
+                    <b>{', '.join(g)}</b>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
+
+
+
 
 
