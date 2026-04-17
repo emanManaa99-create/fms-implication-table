@@ -12,8 +12,24 @@ color:white;
 text-align:center;
 box-shadow:0px 4px 15px rgba(0,0,0,0.3);
 ">
+
 <h2>FSM Minimization Tool</h2>
 <p>Implication Table Method</p>
+
+<div style="
+margin-top:15px;
+display:inline-block;
+padding:10px 20px;
+border-radius:12px;
+background: rgba(255,255,255,0.15);
+backdrop-filter: blur(6px);
+">
+
+<b>Eman Fawzi Manaa</b><br>
+ID: 10513
+
+</div>
+
 </div>
 """, unsafe_allow_html=True)
 
