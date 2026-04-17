@@ -10,24 +10,23 @@ st.markdown(
         border-radius: 16px;
         text-align: center;
         color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.25);">
+        margin-bottom: 25px;">
         <h2>Finite State Machine Minimization</h2>
         <p style="color:#d0d0d0;">Implication Table Method - Moore & Mealy</p>
     </div>
     """,
     unsafe_allow_html=True
 )
+
 mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 10, 4)
 
 states = [chr(65+i) for i in range(int(n))]
 inputs = ["00", "01", "10", "11"]
 
-st.markdown("### Transition Table")
-
 trans = {}
 out = {}
+
 for s in states:
     with st.expander(f"State {s}", expanded=True):
 
@@ -35,12 +34,12 @@ for s in states:
         trans[s] = []
 
         for i, inp in enumerate(inputs):
-            trans[s].append(
-                cols[i].text_input(inp, key=f"{s}{inp}")
-            )
+            trans[s].append(cols[i].text_input(inp, key=f"{s}{inp}"))
 
         out[s] = st.text_input("Output", key=f"o{s}")
-        def idx(s):
+
+
+def idx(s):
     return ord(s) - 65
 
 
@@ -100,7 +99,9 @@ def minimize(states, trans, out):
             groups.append(g)
 
     return groups
-    if st.button("Run Minimization ▶"):
+
+
+if st.button("Run Minimization ▶"):
 
     if all(all(trans[s]) for s in states) and all(out[s] for s in states):
 
@@ -111,28 +112,16 @@ def minimize(states, trans, out):
         else:
             st.success("Equivalent States Found")
 
-            st.markdown("### Result Groups")
-
             for g in result:
                 st.markdown(
                     f"""
                     <div style="
                         background: linear-gradient(135deg,#ffffff,#f3f6ff);
-                        border: 1px solid #dbe4ff;
                         border-left: 6px solid #4b6cb7;
                         padding: 16px;
                         margin: 12px 0;
-                        border-radius: 14px;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-
-                        <div style="font-size:14px;color:#666;margin-bottom:6px;">
-                            Equivalent State Group
-                        </div>
-
-                        <div style="font-size:18px;font-weight:600;color:#1f2a44;">
-                            {' , '.join(g)}
-                        </div>
-
+                        border-radius: 14px;">
+                        {' , '.join(g)}
                     </div>
                     """,
                     unsafe_allow_html=True
