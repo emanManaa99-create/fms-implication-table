@@ -12,7 +12,7 @@ color:white;
 text-align:center;
 box-shadow:0px 4px 20px rgba(0,0,0,0.4);">
 <h2>FSM Minimization Tool</h2>
-<p>Implication Table Method (Moore / Mealy)</p>
+<p>Implication Table Method</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -20,17 +20,25 @@ mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 8, 4)
 
 states = [chr(65+i) for i in range(int(n))]
-inputs = ["X=0", "X=1"]
 
 if "df" not in st.session_state or len(st.session_state.df) != n:
 
-    st.session_state.df = pd.DataFrame({
-        "State": states,
-        "X=0": [""]*n,
-        "X=1": [""]*n,
-        "Output X=0": [""]*n,
-        "Output X=1": [""]*n,
-    })
+    if mode == "Moore":
+        st.session_state.df = pd.DataFrame({
+            "State": states,
+            "X=0": [""]*n,
+            "X=1": [""]*n,
+            "Output": [""]*n
+        })
+
+    else:
+        st.session_state.df = pd.DataFrame({
+            "State": states,
+            "X=0": [""]*n,
+            "X=1": [""]*n,
+            "Output X=0": [""]*n,
+            "Output X=1": [""]*n
+        })
 
 st.markdown("## Input Table")
 
@@ -149,14 +157,17 @@ if st.button("Run Minimization ▶"):
             clean(df.iloc[i]["X=1"])
         ]
 
-        if mode == "Moore":
-
-            o = clean(df.iloc[i]["Output X=0"])
-
-            if o == "":
+        for x in t:
+            if not valid_state(x):
                 invalid = True
 
+        if mode == "Moore":
+
+            o = clean(df.iloc[i]["Output"])
+            if o == "":
+                invalid = True
             out.append(o)
+
         else:
 
             o = [
@@ -166,12 +177,7 @@ if st.button("Run Minimization ▶"):
 
             if "" in o:
                 invalid = True
-
             out.append(o)
-
-        for x in t:
-            if not valid_state(x):
-                invalid = True
 
         trans.append(t)
 
@@ -181,11 +187,11 @@ if st.button("Run Minimization ▶"):
 
         mark = minimize(states, trans, out, mode)
 
-        draw_table(states, mark)
+        st.success("Implication Table Done")
 
         groups = build_groups(states, mark)
 
-        st.success("Equivalent State Groups")
+        st.success("Equivalent Groups")
 
         for g in groups:
             st.markdown(
@@ -202,8 +208,5 @@ if st.button("Run Minimization ▶"):
                 """,
                 unsafe_allow_html=True
             )
-
-
-
 
 
