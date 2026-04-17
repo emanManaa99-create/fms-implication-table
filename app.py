@@ -1,30 +1,31 @@
 import streamlit as st
 
-st.set_page_config(page_title="FSM Minimization Tool", layout="wide")
+st.set_page_config(page_title="FSM Tool", layout="wide")
 
 st.markdown(
     """
     <div style="
-        background: linear-gradient(90deg,#0f0f0f,#2b2b2b);
-        padding: 25px;
-        border-radius: 12px;
+        background: linear-gradient(90deg,#4b6cb7,#182848);
+        padding: 28px;
+        border-radius: 16px;
         text-align: center;
         color: white;
-        margin-bottom: 25px;">
+        margin-bottom: 25px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.25);">
         <h2>Finite State Machine Minimization</h2>
-        <p style="color:#bbbbbb;">Implication Table Method - Moore & Mealy</p>
+        <p style="color:#d0d0d0;">Implication Table Method - Moore & Mealy</p>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-mode = st.selectbox("Select Mode", ["Moore", "Mealy"])
+mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 10, 4)
 
 states = [chr(65+i) for i in range(int(n))]
 inputs = ["00", "01", "10", "11"]
 
-st.markdown("### FSM Transition & Output Table")
+st.markdown("### Transition Table")
 
 trans = {}
 out = {}
@@ -112,7 +113,7 @@ if st.button("Run Minimization ▶"):
         result = minimize(states, trans, out)
 
         if result is None:
-            st.error("Please check input format")
+            st.error("Check input format")
         else:
             st.success("Equivalent States Found")
 
@@ -122,14 +123,13 @@ if st.button("Run Minimization ▶"):
                 st.markdown(
                     f"""
                     <div style="
-                        background:#111;
-                        padding:12px;
-                        margin:8px 0;
-                        border-radius:10px;
-                        color:#00ffcc;
-                        font-size:16px;
-                        font-weight:bold;
-                        text-align:center;">
+                        background: #f5f7ff;
+                        border-left: 6px solid #4b6cb7;
+                        padding: 14px;
+                        margin: 10px 0;
+                        border-radius: 10px;
+                        font-size: 16px;
+                        font-weight: 500;">
                         {' , '.join(g)}
                     </div>
                     """,
