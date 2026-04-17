@@ -9,10 +9,9 @@ background: linear-gradient(90deg,#2c3e50,#4ca1af,#5dade2);
 padding:25px;
 border-radius:15px;
 color:white;
-text-align:center;
-box-shadow:0px 4px 18px rgba(0,0,0,0.3);">
+text-align:center;">
 <h2>FSM Minimization Tool</h2>
-<p>Implication Table Method (Moore / Mealy)</p>
+<p>Implication Table Method</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -35,7 +34,6 @@ if "df" not in st.session_state or len(st.session_state.df) != n:
             "X=1": [""]*n,
             "Output": [""]*n
         })
-
     else:
         st.session_state.df = pd.DataFrame({
             "State": states,
@@ -67,7 +65,7 @@ def valid_state(x):
 def minimize(states, trans, out, mode):
 
     n = len(states)
-    mark = [[0]*n for _ in range(n)]
+    mark = [[0 for _ in range(n)] for _ in range(n)]
 
     for i in range(n):
         for j in range(i):
@@ -75,7 +73,6 @@ def minimize(states, trans, out, mode):
             if mode == "Moore":
                 if out[i] != out[j]:
                     mark[i][j] = 1
-
             else:
                 for k in range(2):
                     if out[i][k] != out[j][k]:
@@ -121,6 +118,8 @@ def union(parent, a, b):
     rb = find(parent, b)
     if ra != rb:
         parent[rb] = ra
+
+
 def build_groups(states, mark):
 
     n = len(states)
@@ -132,12 +131,26 @@ def build_groups(states, mark):
                 union(parent, i, j)
 
     groups = {}
-
     for i in range(n):
         root = find(parent, i)
         groups.setdefault(root, []).append(states[i])
 
     return list(groups.values())
+
+
+def show_mealy(trans, out):
+
+    st.markdown("## Mealy Table")
+
+    df = pd.DataFrame({
+        "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
+        "Next State (X=0)": [trans[i][0] for i in range(len(states))],
+        "Next State (X=1)": [trans[i][1] for i in range(len(states))],
+        "Output (X=0)": [out[i][0] for i in range(len(states))],
+        "Output (X=1)": [out[i][1] for i in range(len(states))]
+    })
+
+    st.dataframe(df, use_container_width=True)
 
 
 def show_moore(trans, out):
@@ -149,23 +162,6 @@ def show_moore(trans, out):
         "X=0 Next State": [trans[i][0] for i in range(len(states))],
         "X=1 Next State": [trans[i][1] for i in range(len(states))],
         "Output": out
-    })
-
-    st.dataframe(df, use_container_width=True)
-
-
-def show_mealy(trans, out):
-
-    st.markdown("## Mealy Table")
-
-    df = pd.DataFrame({
-        "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
-
-        "Next State (X=0)": [trans[i][0] for i in range(len(states))],
-        "Next State (X=1)": [trans[i][1] for i in range(len(states))],
-
-        "Output (X=0)": [out[i][0] for i in range(len(states))],
-        "Output (X=1)": [out[i][1] for i in range(len(states))]
     })
 
     st.dataframe(df, use_container_width=True)
@@ -229,18 +225,9 @@ if st.button("Run Minimization ▶"):
 
         for g in groups:
             st.markdown(
-                f"""
-                <div style="
-                    background: linear-gradient(90deg,#2c3e50,#4ca1af);
-                    color:white;
-                    padding:12px;
-                    margin:10px;
-                    border-radius:10px;
-                    border-left:5px solid #5dade2;">
-                    <b>{', '.join(g)}</b>
-                </div>
-                """,
+                f"<div style='background:linear-gradient(90deg,#2c3e50,#4ca1af);color:white;padding:12px;margin:10px;border-radius:10px;border-left:5px solid #5dade2;'><b>{', '.join(g)}</b></div>",
                 unsafe_allow_html=True
             )
+
 
 
