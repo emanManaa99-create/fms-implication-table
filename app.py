@@ -5,12 +5,12 @@ st.set_page_config(page_title="FSM Minimization Tool", layout="wide")
 
 st.markdown("""
 <div style="
-background: linear-gradient(90deg,#0f2027,#203a43,#2c5364);
+background: linear-gradient(90deg,#2c3e50,#4ca1af,#5dade2);
 padding:25px;
 border-radius:15px;
 color:white;
 text-align:center;
-box-shadow:0px 4px 20px rgba(0,0,0,0.4);">
+box-shadow:0px 4px 18px rgba(0,0,0,0.3);">
 <h2>FSM Minimization Tool</h2>
 <p>Implication Table Method</p>
 </div>
@@ -20,6 +20,11 @@ mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 8, 4)
 
 states = [chr(65+i) for i in range(int(n))]
+
+state_bits = {
+    "A": "00", "B": "01", "C": "10", "D": "11",
+    "E": "100", "F": "101"
+}
 
 if "df" not in st.session_state or len(st.session_state.df) != n:
 
@@ -36,8 +41,8 @@ if "df" not in st.session_state or len(st.session_state.df) != n:
             "State": states,
             "X=0": [""]*n,
             "X=1": [""]*n,
-            "Output X=0": [""]*n,
-            "Output X=1": [""]*n
+            "O/P X=0": [""]*n,
+            "O/P X=1": [""]*n
         })
 
 st.markdown("## Input Table")
@@ -45,7 +50,6 @@ st.markdown("## Input Table")
 df = st.data_editor(
     st.session_state.df,
     use_container_width=True,
-    key="editor",
     num_rows="fixed"
 )
 
@@ -65,6 +69,7 @@ def minimize(states, trans, out, mode):
     n = len(states)
     mark = [[0]*n for _ in range(n)]
 
+    # Step 1: Initial marking
     for i in range(n):
         for j in range(i):
 
@@ -78,6 +83,7 @@ def minimize(states, trans, out, mode):
                         mark[i][j] = 1
                         break
 
+    # Step 2: Propagation
     changed = True
 
     while changed:
@@ -94,6 +100,9 @@ def minimize(states, trans, out, mode):
                     ni = idx(trans[i][k])
                     nj = idx(trans[j][k])
 
+                    if ni == nj:
+                        continue
+
                     x = max(ni, nj)
                     y = min(ni, nj)
 
@@ -103,42 +112,67 @@ def minimize(states, trans, out, mode):
                         break
 
     return mark
+    def find(parent, x):
+    if parent[x] != x:
+        parent[x] = find(parent, parent[x])
+    return parent[x]
+
+
+def union(parent, a, b):
+    ra = find(parent, a)
+    rb = find(parent, b)
+    if ra != rb:
+        parent[rb] = ra
 
 
 def build_groups(states, mark):
 
-    visited = [0]*len(states)
-    groups = []
+    n = len(states)
+    parent = list(range(n))
 
-    for i in range(len(states)):
-        if not visited[i]:
-            g = [states[i]]
-            visited[i] = 1
+    for i in range(n):
+        for j in range(i):
+            if mark[i][j] == 0:
+                union(parent, i, j)
 
-            for j in range(i+1, len(states)):
-                if mark[max(i,j)][min(i,j)] == 0:
-                    g.append(states[j])
-                    visited[j] = 1
+    groups = {}
 
-            groups.append(g)
+    for i in range(n):
+        root = find(parent, i)
+        groups.setdefault(root, []).append(states[i])
 
-    return groups
+    return list(groups.values())
 
 
-def draw_table(states, mark):
+def show_moore(trans, out):
 
-    st.markdown("## Implication Table")
+    st.markdown("## Moore Table")
 
-    for i in range(len(states)):
-        row = ""
-        for j in range(len(states)):
+    df = pd.DataFrame({
+        "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
+        "X=0 Next State": [trans[i][0] for i in range(len(states))],
+        "X=1 Next State": [trans[i][1] for i in range(len(states))],
+        "Output": out
+    })
 
-            if j >= i:
-                row += "⬜ "
-            else:
-                row += "❌ " if mark[i][j] else "⭕ "
+    st.dataframe(df, use_container_width=True)
 
-        st.write(states[i], row)
+
+def show_mealy(trans, out):
+
+    st.markdown("## Mealy Table")
+
+    df = pd.DataFrame({
+        "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
+
+        "Next State (X=0)": [trans[i][0] for i in range(len(states))],
+        "Next State (X=1)": [trans[i][1] for i in range(len(states))],
+
+        "Output (X=0)": [out[i][0] for i in range(len(states))],
+        "Output (X=1)": [out[i][1] for i in range(len(states))]
+    })
+
+    st.dataframe(df, use_container_width=True)
 
 
 if st.button("Run Minimization ▶"):
@@ -171,8 +205,8 @@ if st.button("Run Minimization ▶"):
         else:
 
             o = [
-                clean(df.iloc[i]["Output X=0"]),
-                clean(df.iloc[i]["Output X=1"])
+                clean(df.iloc[i]["O/P X=0"]),
+                clean(df.iloc[i]["O/P X=1"])
             ]
 
             if "" in o:
@@ -183,13 +217,17 @@ if st.button("Run Minimization ▶"):
 
     if invalid:
         st.error("Please fill all fields correctly")
+
     else:
 
         mark = minimize(states, trans, out, mode)
 
-        st.success("Implication Table Done")
-
         groups = build_groups(states, mark)
+
+        if mode == "Moore":
+            show_moore(trans, out)
+        else:
+            show_mealy(trans, out)
 
         st.success("Equivalent Groups")
 
@@ -197,16 +235,18 @@ if st.button("Run Minimization ▶"):
             st.markdown(
                 f"""
                 <div style="
-                    background: linear-gradient(90deg,#0f2027,#2c5364);
+                    background: linear-gradient(90deg,#2c3e50,#4ca1af);
                     color:white;
                     padding:12px;
                     margin:10px;
                     border-radius:10px;
-                    border-left:5px solid #4facfe;">
+                    border-left:5px solid #5dade2;">
                     <b>{', '.join(g)}</b>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
+
+
 
 
