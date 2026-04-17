@@ -100,8 +100,8 @@ def minimize(states, trans, out, mode):
     return mark
     def find(parent, x):
     if parent[x] != x:
-        parent[x] = find(parent, parent[x])
-    return parent[x]
+        return find(parent, parent[x])
+    return x
 
 
 def union(parent, a, b):
@@ -109,7 +109,6 @@ def union(parent, a, b):
     rb = find(parent, b)
     if ra != rb:
         parent[rb] = ra
-
 
 def build_groups(states, mark):
 
