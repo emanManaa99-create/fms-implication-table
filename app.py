@@ -4,7 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="FSM Tool", layout="wide")
 
 st.markdown("""
-<div style="background:linear-gradient(90deg,#4facfe,#00f2fe);
+<div style="background:linear-gradient(90deg,#0f2027,#203a43,#2c5364);
 padding:25px;border-radius:15px;color:white;text-align:center">
 <h2>FSM Minimization Tool</h2>
 <p>Implication Table Method</p>
@@ -15,48 +15,53 @@ mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = st.number_input("Number of States", 2, 8, 4)
 
 states = [chr(65+i) for i in range(int(n))]
-inputs = ["00","01","10","11"]
 
-if mode == "Mealy":
-    st.info("Enter as: NextState/Output  →  Example: B/0")
-
-if "df" not in st.session_state or len(st.session_state.df) != n:
-
-    st.session_state.df = pd.DataFrame({
+if "ns_df" not in st.session_state or len(st.session_state.ns_df) != n:
+    st.session_state.ns_df = pd.DataFrame({
         "State": states,
-        "00": [""]*n,
-        "01": [""]*n,
-        "10": [""]*n,
-        "11": [""]*n,
+        "X=0": [""]*n,
+        "X=1": [""]*n
+    })
+
+if "op_df" not in st.session_state or len(st.session_state.op_df) != n:
+    st.session_state.op_df = pd.DataFrame({
+        "State": states,
+        "X=0": [""]*n,
+        "X=1": [""]*n
+    })
+
+if "moore_df" not in st.session_state or len(st.session_state.moore_df) != n:
+    st.session_state.moore_df = pd.DataFrame({
+        "State": states,
         "Output": [""]*n
     })
 
-df = st.data_editor(
-    st.session_state.df,
-    use_container_width=True,
-    key="editor",
-    num_rows="fixed"
-)
-st.session_state.temp_df = df
-def clean(x):
+st.markdown("## Input Tables")
+
+if mode == "Mealy":
+
+    st.markdown("### Next State")
+    ns_df = st.data_editor(st.session_state.ns_df, use_container_width=True, key="ns")
+
+    st.markdown("### Output")
+    op_df = st.data_editor(st.session_state.op_df, use_container_width=True, key="op")
+
+    st.session_state.temp_ns = ns_df
+    st.session_state.temp_op = op_df
+
+else:
+
+    st.markdown("### Moore Table")
+    moore_df = st.data_editor(st.session_state.moore_df, use_container_width=True, key="mo")
+    st.session_state.temp_moore = moore_df
+    def clean(x):
     return str(x).strip().upper()
-
-
-def parse_mealy(cell):
-    try:
-        s, o = cell.split("/")
-        return s.strip(), o.strip()
-    except:
-        return None, None
-
 
 def idx(x):
     return ord(x) - 65
 
-
 def valid_state(x):
     return x in states
-
 
 def minimize(states, trans, out, mode):
 
@@ -69,9 +74,8 @@ def minimize(states, trans, out, mode):
             if mode == "Moore":
                 if out[i] != out[j]:
                     mark[i][j] = 1
-
             else:
-                for k in range(4):
+                for k in range(2):
                     if out[i][k] != out[j][k]:
                         mark[i][j] = 1
                         break
@@ -87,7 +91,7 @@ def minimize(states, trans, out, mode):
                 if mark[i][j]:
                     continue
 
-                for k in range(4):
+                for k in range(2):
 
                     ni = idx(trans[i][k])
                     nj = idx(trans[j][k])
@@ -101,7 +105,6 @@ def minimize(states, trans, out, mode):
                         break
 
     return mark
-
 
 def build_groups(states, mark):
 
@@ -122,69 +125,63 @@ def build_groups(states, mark):
 
     return groups
 
-
 def draw_table(states, mark):
 
     st.markdown("## Implication Table")
 
     for i in range(len(states)):
         row = ""
-
         for j in range(len(states)):
-
             if j >= i:
                 row += "⬜ "
             else:
                 row += "❌ " if mark[i][j] else "⭕ "
-
         st.write(states[i], row)
-
 
 if st.button("Run Minimization ▶"):
 
-    df = st.session_state.temp_df.copy()
-
+    invalid = False
     trans = []
     out = []
 
-    invalid = False
+    if mode == "Mealy":
 
-    for i in range(n):
+        ns_df = st.session_state.temp_ns
+        op_df = st.session_state.temp_op
 
-        t = []
-        o = []
+        for i in range(n):
 
-        for col in ["00","01","10","11"]:
+            t0 = clean(ns_df.iloc[i]["X=0"])
+            t1 = clean(ns_df.iloc[i]["X=1"])
 
-            val = clean(df.iloc[i][col])
+            o0 = clean(op_df.iloc[i]["X=0"])
+            o1 = clean(op_df.iloc[i]["X=1"])
 
-            if mode == "Mealy":
-
-                s, op = parse_mealy(val)
-
-                if s is None or not valid_state(s):
-                    invalid = True
-
-                t.append(s)
-                o.append(op)
-
-            else:
-                if not valid_state(val):
-                    invalid = True
-                t.append(val)
-
-        if mode == "Moore":
-            out_val = clean(df.iloc[i]["Output"])
-            if out_val == "":
+            if not valid_state(t0) or not valid_state(t1):
                 invalid = True
-            out.append(out_val)
-        else:
+
+            if o0 == "" or o1 == "":
+                invalid = True
+
+            trans.append([t0, t1])
+            out.append([o0, o1])
+
+    else:
+
+        moore_df = st.session_state.temp_moore
+
+        for i in range(n):
+
+            o = clean(moore_df.iloc[i]["Output"])
+
+            if o == "":
+                invalid = True
+
+            trans.append([states[i], states[i]])
             out.append(o)
 
-        trans.append(t)
-
     if invalid:
-        st.error("Check input format (Mealy: B/0)")
+        st.error("Please fill all fields correctly")
     else:
 
         mark = minimize(states, trans, out, mode)
@@ -199,11 +196,12 @@ if st.button("Run Minimization ▶"):
             st.markdown(
                 f"""
                 <div style="background:white;
-                border-left:5px solid #4facfe;
-                padding:10px;margin:10px;border-radius:10px;">
+                border-left:5px solid #203a43;
+                padding:12px;margin:10px;border-radius:10px;">
                 <b>{', '.join(g)}</b>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-st.session_state.temp_df = df
+
+    st.session_state.temp_moore = moore_df
