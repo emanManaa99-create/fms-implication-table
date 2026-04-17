@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 st.set_page_config(page_title="FSM Minimization Tool", layout="wide")
 
@@ -10,12 +11,9 @@ st.markdown(
         border-radius: 18px;
         text-align: center;
         color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.15);">
+        margin-bottom: 25px;">
         <h2>Finite State Machine Minimization</h2>
-        <p style="margin-top:8px;color:#eafcff;">
-            Implication Table Method - Moore & Mealy
-        </p>
+        <p>Implication Table Method - Moore & Mealy</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -27,35 +25,32 @@ n = st.number_input("Number of States", 2, 10, 4)
 states = [chr(65+i) for i in range(int(n))]
 inputs = ["00", "01", "10", "11"]
 
-trans = {}
-out = {}
+st.markdown("## Transition Table (Excel Style)")
 
-st.markdown("## Transition Table")
+if "df" not in st.session_state:
+    st.session_state.df = None
 
-for s in states:
-    st.markdown(f"### State {s}")
-
-    cols = st.columns(4)
-    trans[s] = []
-    out[s] = []
-
-    for i, inp in enumerate(inputs):
-        trans[s].append(cols[i].text_input(f"Next {inp}", key=f"n{s}{inp}"))
-
-    if mode == "Moore":
-        out[s] = st.text_input("Output", key=f"o{s}")
-    else:
-        st.caption("Mealy: Output per input")
-        c2 = st.columns(4)
-        for i, inp in enumerate(inputs):
-out[s].append(c2[i].text_input(f"Out {inp}", key=f"m{s}{inp}"))
-
-def idx(x):
-    return ord(x) - 65
+if st.session_state.df is None or len(st.session_state.df) != n:
+    st.session_state.df = pd.DataFrame({
+        "State": states,
+        "00": [""]*n,
+        "01": [""]*n,
+        "10": [""]*n,
+        "11": [""]*n,
+        "Output": [""]*n
+    })
+edited = st.data_editor(st.session_state.df, use_container_width=True)
+st.session_state.df = edited
+def clean(x):
+    return str(x).strip().upper() if x is not None else ""
 
 
 def valid_state(x):
     return x in states
+
+
+def idx(x):
+    return ord(x) - 65
 
 
 def minimize(states, trans, out, mode):
@@ -67,12 +62,11 @@ def minimize(states, trans, out, mode):
         for j in range(i):
 
             if mode == "Moore":
-                if out[states[i]] != out[states[j]]:
+                if out[i] != out[j]:
                     mark[i][j] = 1
-
             else:
                 for k in range(4):
-                    if out[states[i]][k] != out[states[j]][k]:
+                    if out[i][k] != out[j][k]:
                         mark[i][j] = 1
                         break
 
@@ -87,13 +81,10 @@ def minimize(states, trans, out, mode):
                 if mark[i][j] == 1:
                     continue
 
-                si = states[i]
-                sj = states[j]
-
                 for k in range(4):
 
-                    ni = idx(trans[si][k])
-                    nj = idx(trans[sj][k])
+                    ni = idx(trans[i][k])
+                    nj = idx(trans[j][k])
 
                     x = max(ni, nj)
                     y = min(ni, nj)
@@ -110,35 +101,32 @@ def draw_table(states, mark):
 
     st.markdown("## Implication Table")
 
-    n = len(states)
-
-    for i in range(n):
+    for i in range(len(states)):
         row = ""
-        for j in range(n):
+
+        for j in range(len(states)):
 
             if j >= i:
                 row += "⬜ "
             else:
-                row += "❌ " if mark[i][j] == 1 else "⭕ "
+                row += "❌ " if mark[i][j] else "⭕ "
 
-        st.write(f"{states[i]} : {row}")
+        st.write(states[i], row)
 
 
 def build_groups(states, mark):
 
     n = len(states)
-    visited = [0] * n
+    visited = [0]*n
     groups = []
 
     for i in range(n):
-
         if not visited[i]:
             g = [states[i]]
             visited[i] = 1
 
-            for j in range(i + 1, n):
-
-                if mark[max(i, j)][min(i, j)] == 0:
+            for j in range(i+1, n):
+                if mark[max(i,j)][min(i,j)] == 0:
                     g.append(states[j])
                     visited[j] = 1
 
@@ -149,24 +137,39 @@ def build_groups(states, mark):
 
 if st.button("Run Minimization ▶"):
 
+    df = st.session_state.df.copy()
+
+    trans = []
+    out = []
+
     invalid = False
 
-    for s in states:
+    for i in range(len(states)):
 
-        for i in range(4):
-            if not valid_state(trans[s][i]):
+        t = [
+            clean(df.iloc[i]["00"]),
+            clean(df.iloc[i]["01"]),
+            clean(df.iloc[i]["10"]),
+            clean(df.iloc[i]["11"]),
+        ]
+
+        o = clean(df.iloc[i]["Output"])
+
+        for x in t:
+            if x and not valid_state(x):
                 invalid = True
 
-        if mode == "Moore":
-            if not out[s]:
-                invalid = True
-        else:
-            for i in range(4):
-                if not out[s][i]:
-                    invalid = True
+        if mode == "Moore" and not o:
+            invalid = True
+
+        if mode == "Mealy" and any(x == "" for x in t):
+            invalid = True
+
+        trans.append(t)
+        out.append(o if mode == "Moore" else t)
 
     if invalid:
-        st.error("Invalid input: ensure states are A, B, C... and all fields are filled")
+        st.error("Invalid input: check states and fill all fields")
     else:
 
         mark = minimize(states, trans, out, mode)
@@ -181,22 +184,14 @@ if st.button("Run Minimization ▶"):
             st.markdown(
                 f"""
                 <div style="
-                    background: #ffffff;
-                    border-left: 6px solid #4facfe;
-                    padding: 16px;
-                    margin: 12px 0;
-                    border-radius: 14px;
-                    box-shadow: 0 3px 10px rgba(0,0,0,0.08);">
-
-                    <div style="font-size:13px;color:#666;">
-                        Equivalent State Group
-                    </div>
-
-                    <div style="font-size:18px;font-weight:600;color:#1f3b57;">
-                        {', '.join(g)}
-                    </div>
+                    background:white;
+                    border-left:5px solid #4facfe;
+                    padding:12px;
+                    margin:10px 0;
+                    border-radius:10px;">
+                    <b>{', '.join(g)}</b>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-            out[s].append(c2[i].text_input(f"Out {inp}", key=f"m{s}{inp}"))
+st.session_state.df = edited
