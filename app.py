@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="FSM Minimization Tool", layout="wide")
+st.set_page_config(page_title="FSM Tool", layout="wide")
 
 st.markdown("""
 <div style="
@@ -11,19 +11,16 @@ border-radius:15px;
 color:white;
 text-align:center;">
 <h2>FSM Minimization Tool</h2>
-<p>Implication Table Method</p>
+<p>Implication Table</p>
 </div>
 """, unsafe_allow_html=True)
 
 mode = st.selectbox("Mode", ["Moore", "Mealy"])
-n = st.number_input("Number of States", 2, 8, 4)
+n = st.number_input("States", 2, 8, 4)
 
 states = [chr(65+i) for i in range(int(n))]
 
-state_bits = {
-    "A": "00", "B": "01", "C": "10", "D": "11",
-    "E": "100", "F": "101"
-}
+state_bits = {"A":"00","B":"01","C":"10","D":"11","E":"100","F":"101"}
 
 if "df" not in st.session_state or len(st.session_state.df) != n:
 
@@ -43,13 +40,7 @@ if "df" not in st.session_state or len(st.session_state.df) != n:
             "O/P X=1": [""]*n
         })
 
-st.markdown("## Input Table")
-
-df = st.data_editor(
-    st.session_state.df,
-    use_container_width=True,
-    num_rows="fixed"
-)
+df = st.data_editor(st.session_state.df, use_container_width=True, num_rows="fixed")
 
 st.session_state.temp_df = df
 def clean(x):
@@ -58,14 +49,14 @@ def clean(x):
 def idx(x):
     return ord(x) - 65
 
-def valid_state(x):
+def valid(x):
     return x in states
 
 
 def minimize(states, trans, out, mode):
 
     n = len(states)
-    mark = [[0 for _ in range(n)] for _ in range(n)]
+    mark = [[0]*n for _ in range(n)]
 
     for i in range(n):
         for j in range(i):
@@ -131,9 +122,12 @@ def build_groups(states, mark):
                 union(parent, i, j)
 
     groups = {}
+
     for i in range(n):
-        root = find(parent, i)
-        groups.setdefault(root, []).append(states[i])
+        r = find(parent, i)
+        if r not in groups:
+            groups[r] = []
+        groups[r].append(states[i])
 
     return list(groups.values())
 
@@ -144,10 +138,10 @@ def show_mealy(trans, out):
 
     df = pd.DataFrame({
         "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
-        "Next State (X=0)": [trans[i][0] for i in range(len(states))],
-        "Next State (X=1)": [trans[i][1] for i in range(len(states))],
-        "Output (X=0)": [out[i][0] for i in range(len(states))],
-        "Output (X=1)": [out[i][1] for i in range(len(states))]
+        "Next X=0": [trans[i][0] for i in range(len(states))],
+        "Next X=1": [trans[i][1] for i in range(len(states))],
+        "Out X=0": [out[i][0] for i in range(len(states))],
+        "Out X=1": [out[i][1] for i in range(len(states))]
     })
 
     st.dataframe(df, use_container_width=True)
@@ -159,15 +153,15 @@ def show_moore(trans, out):
 
     df = pd.DataFrame({
         "State": [f"{s} ({state_bits.get(s,'')})" for s in states],
-        "X=0 Next State": [trans[i][0] for i in range(len(states))],
-        "X=1 Next State": [trans[i][1] for i in range(len(states))],
+        "Next X=0": [trans[i][0] for i in range(len(states))],
+        "Next X=1": [trans[i][1] for i in range(len(states))],
         "Output": out
     })
 
     st.dataframe(df, use_container_width=True)
 
 
-if st.button("Run Minimization ▶"):
+if st.button("Run"):
 
     df = st.session_state.temp_df.copy()
 
@@ -178,29 +172,19 @@ if st.button("Run Minimization ▶"):
 
     for i in range(n):
 
-        t = [
-            clean(df.iloc[i]["X=0"]),
-            clean(df.iloc[i]["X=1"])
-        ]
+        t = [clean(df.iloc[i]["X=0"]), clean(df.iloc[i]["X=1"])]
 
         for x in t:
-            if not valid_state(x):
+            if not valid(x):
                 invalid = True
 
         if mode == "Moore":
-
             o = clean(df.iloc[i]["Output"])
             if o == "":
                 invalid = True
             out.append(o)
-
         else:
-
-            o = [
-                clean(df.iloc[i]["O/P X=0"]),
-                clean(df.iloc[i]["O/P X=1"])
-            ]
-
+            o = [clean(df.iloc[i]["O/P X=0"]), clean(df.iloc[i]["O/P X=1"])]
             if "" in o:
                 invalid = True
             out.append(o)
@@ -208,12 +192,9 @@ if st.button("Run Minimization ▶"):
         trans.append(t)
 
     if invalid:
-        st.error("Please fill all fields correctly")
-
+        st.error("Fill all fields")
     else:
-
         mark = minimize(states, trans, out, mode)
-
         groups = build_groups(states, mark)
 
         if mode == "Moore":
@@ -221,11 +202,11 @@ if st.button("Run Minimization ▶"):
         else:
             show_mealy(trans, out)
 
-        st.success("Equivalent Groups Found")
+        st.success("Done")
 
         for g in groups:
             st.markdown(
-                f"<div style='background:linear-gradient(90deg,#2c3e50,#4ca1af);color:white;padding:12px;margin:10px;border-radius:10px;border-left:5px solid #5dade2;'><b>{', '.join(g)}</b></div>",
+                f"<div style='background:linear-gradient(90deg,#2c3e50,#4ca1af);color:white;padding:12px;margin:10px;border-radius:10px;'><b>{', '.join(g)}</b></div>",
                 unsafe_allow_html=True
             )
 
