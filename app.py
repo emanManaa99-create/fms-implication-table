@@ -53,8 +53,9 @@ else:
 
     st.markdown("### Moore Table")
     moore_df = st.data_editor(st.session_state.moore_df, use_container_width=True, key="mo")
+
     st.session_state.temp_moore = moore_df
-    def clean(x):
+def clean(x):
     return str(x).strip().upper()
 
 def idx(x):
@@ -131,11 +132,14 @@ def draw_table(states, mark):
 
     for i in range(len(states)):
         row = ""
+
         for j in range(len(states)):
+
             if j >= i:
                 row += "⬜ "
             else:
                 row += "❌ " if mark[i][j] else "⭕ "
+
         st.write(states[i], row)
 
 if st.button("Run Minimization ▶"):
@@ -204,4 +208,4 @@ if st.button("Run Minimization ▶"):
                 unsafe_allow_html=True
             )
 
-    st.session_state.temp_moore = moore_df
+
