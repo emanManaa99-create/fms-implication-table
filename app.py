@@ -121,20 +121,34 @@ if st.button("Run Minimization ▶"):
 
             for g in result:
                 st.markdown(
-                    f"""
-                    <div style="
-                        background: #f5f7ff;
-                        border-left: 6px solid #4b6cb7;
-                        padding: 14px;
-                        margin: 10px 0;
-                        border-radius: 10px;
-                        font-size: 16px;
-                        font-weight: 500;">
-                        {' , '.join(g)}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+    f"""
+    <div style="
+        background: linear-gradient(135deg,#ffffff,#f3f6ff);
+        border: 1px solid #dbe4ff;
+        border-left: 6px solid #4b6cb7;
+        padding: 16px;
+        margin: 12px 0;
+        border-radius: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: 0.3s;">
+        
+        <div style="
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 6px;">
+            Equivalent State Group
+        </div>
+
+        <div style="
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2a44;">
+            {'  ,  '.join(g)}
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
     else:
         st.warning("Please fill all fields")
