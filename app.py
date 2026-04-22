@@ -12,7 +12,6 @@ color:white;
 text-align:center;
 box-shadow:0px 4px 15px rgba(0,0,0,0.3);
 ">
-
 <h2>FSM Minimization Tool</h2>
 <p>Implication Table Method</p>
 
@@ -22,12 +21,9 @@ display:inline-block;
 padding:10px 20px;
 border-radius:12px;
 background: rgba(255,255,255,0.15);
-backdrop-filter: blur(6px);
 ">
-
 <b>Eman Fawzi Manaa</b><br>
 ID: 10513
-
 </div>
 
 </div>
@@ -35,51 +31,71 @@ ID: 10513
 
 mode = st.selectbox("Mode", ["Moore", "Mealy"])
 n = int(st.number_input("Number of States", 2, 8, 4))
+num_inputs = int(st.number_input("Number of Inputs", 1, 3, 1))
 
 states = [chr(65+i) for i in range(n)]
 
+def generate_inputs(k):
+    return [format(i, f"0{k}b") for i in range(2**k)]
+
+inputs = generate_inputs(num_inputs)
 
 if "last_mode" not in st.session_state:
     st.session_state.last_mode = mode
-
 if "last_n" not in st.session_state:
     st.session_state.last_n = n
+if "last_inp" not in st.session_state:
+    st.session_state.last_inp = num_inputs
 
 if ("df" not in st.session_state
     or st.session_state.last_mode != mode
-    or st.session_state.last_n != n):
+    or st.session_state.last_n != n
+    or st.session_state.last_inp != num_inputs):
 
     st.session_state.last_mode = mode
     st.session_state.last_n = n
+    st.session_state.last_inp = num_inputs
+
+    data = {"State": states}
+
+    for inp in inputs:
+        data[f"Next (X = {inp})"] = [""] * n
 
     if mode == "Moore":
-        st.session_state.df = pd.DataFrame({
-            "State": states,
-            "Next (X = 0)": [""]*n,
-            "Next (X = 1)": [""]*n,
-            "Output": [""]*n
-        })
+        data["Output"] = [""] * n
     else:
-        st.session_state.df = pd.DataFrame({
-            "State": states,
-            "Next (X = 0)": [""]*n,
-            "Next (X = 1)": [""]*n,
-            "Output (X = 0)": [""]*n,
-            "Output (X = 1)": [""]*n
-        })
+        for inp in inputs:
+            data[f"Output (X = {inp})"] = [""] * n
+
+    st.session_state.df = pd.DataFrame(data)
 
 df = st.data_editor(st.session_state.df, use_container_width=True, num_rows="fixed")
-
 
 
 def clean(x):
     return str(x).strip().upper()
 
-def idx(x):
-    return ord(x) - 65
-
 def valid_state(x):
     return x in states
+
+
+def reachable_states(all_states_names, trans):
+
+    visited = set()
+    stack = [0]
+
+    while stack:
+        s = stack.pop()
+
+        if s in visited:
+            continue
+
+        visited.add(s)
+
+        for nxt in trans[s]:
+            stack.append(all_states_names.index(nxt))
+
+    return sorted(list(visited))
 
 
 def minimize(states, trans, out, mode):
@@ -93,10 +109,11 @@ def minimize(states, trans, out, mode):
             if mode == "Moore":
                 if out[i] != out[j]:
                     mark[i][j] = 1
-
             else:
-                if out[i][0] != out[j][0] or out[i][1] != out[j][1]:
-                    mark[i][j] = 1
+                for k in range(len(out[i])):
+                    if out[i][k] != out[j][k]:
+                        mark[i][j] = 1
+                        break
 
     changed = True
 
@@ -109,10 +126,13 @@ def minimize(states, trans, out, mode):
                 if mark[i][j]:
                     continue
 
-                for k in range(2):
+                for k in range(len(trans[i])):
 
-                    ni = idx(trans[i][k])
-                    nj = idx(trans[j][k])
+                    ni = states.index(trans[i][k])
+                    nj = states.index(trans[j][k])
+
+                    if ni == nj:
+                        continue
 
                     x = max(ni, nj)
                     y = min(ni, nj)
@@ -164,10 +184,7 @@ if st.button("Run Minimization"):
 
     for i in range(n):
 
-        t = [
-            clean(df.iloc[i]["Next (X = 0)"]),
-            clean(df.iloc[i]["Next (X = 1)"])
-        ]
+        t = [clean(df.iloc[i][f"Next (X = {inp})"]) for inp in inputs]
 
         for x in t:
             if not valid_state(x):
@@ -178,14 +195,12 @@ if st.button("Run Minimization"):
             if o == "":
                 invalid = True
             out.append(o)
-
         else:
-            o = [
-                clean(df.iloc[i]["Output (X = 0)"]),
-                clean(df.iloc[i]["Output (X = 1)"])
-            ]
-            if "" in o:
+            o = [clean(df.iloc[i][f"Output (X = {inp})"]) for inp in inputs]
+
+            if "" in o or len(o) != len(t):
                 invalid = True
+
             out.append(o)
 
         trans.append(t)
@@ -194,6 +209,12 @@ if st.button("Run Minimization"):
         st.error("Fill all fields correctly")
 
     else:
+        reachable = reachable_states(states, trans)
+
+        states = [states[i] for i in reachable]
+        trans = [trans[i] for i in reachable]
+        out = [out[i] for i in reachable]
+
         mark = minimize(states, trans, out, mode)
         groups = build_groups(states, mark)
 
@@ -213,6 +234,7 @@ if st.button("Run Minimization"):
                 """,
                 unsafe_allow_html=True
             )
+
 
 
 
